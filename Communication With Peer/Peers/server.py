@@ -1,34 +1,47 @@
-import TxBlock
+# server.py
 import socket
 import pickle
+import Transactions
 
 TCP_PORT = 5005
-BUFFER_SIZE=1024
+BUFFER_SIZE = 1024
 
 def newConnection(ip_addr):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((ip_addr,TCP_PORT))
+    s.bind((ip_addr, TCP_PORT))
     s.listen()
+    print(f"Server listening on {ip_addr}:{TCP_PORT}")
     return s
 
-def recvObj(socket):
-    new_sock, addr = socket.accept()
+def recvObj(server_socket):
+    new_sock, addr = server_socket.accept()
+    print(f"Connected to {addr}")
     all_data = b''
     while True:
         data = new_sock.recv(BUFFER_SIZE)
         if not data:
             break
         all_data += data
-    return pickle.loads(all_data)
+    new_sock.close()
+    try:
+        obj = pickle.loads(all_data)
+        return obj
+    except Exception as e:
+        print("Error during unpickling:", e)
+        return None
 
 if __name__ == "__main__":
-    s = newConnection('localhost')  # <-- Fixed from hardcoded IP to localhost
-    newB = recvObj(s)
-    print(newB.data[0])
-    print(newB.data[1])
-    if newB.is_valid():
-        print("Success. Tx is valid")
-    else:
-        print("Error. Tx invalid.")
-    newTx = recvObj(s)
-    print(newTx)
+    s = newConnection('localhost')
+
+    while True:
+        obj = recvObj(s)
+        if obj:
+            print("\n--- Received Transaction ---")
+            try:
+                print(obj)
+                if obj.is_valid():
+                    print("Transaction is valid ✅")
+                else:
+                    print("Transaction is invalid ❌")
+            except Exception as e:
+                print("Error handling transaction:", e)
